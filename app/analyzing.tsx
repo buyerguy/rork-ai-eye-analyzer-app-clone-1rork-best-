@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -18,6 +18,23 @@ export default function AnalyzingScreen() {
   const { imageUri } = useLocalSearchParams();
   const { incrementScans, addToHistory } = useApp();
   const [status, setStatus] = useState("Contacting AI service...");
+  
+  // Add safety checks for functions using useCallback
+  const safeIncrementScans = useCallback(async () => {
+    if (typeof incrementScans === 'function') {
+      await incrementScans();
+    } else {
+      console.warn('incrementScans function not available');
+    }
+  }, [incrementScans]);
+  
+  const safeAddToHistory = useCallback(async (historyItem: any) => {
+    if (typeof addToHistory === 'function') {
+      await addToHistory(historyItem);
+    } else {
+      console.warn('addToHistory function not available');
+    }
+  }, [addToHistory]);
 
   useEffect(() => {
     const analyzeImage = async () => {
@@ -229,8 +246,8 @@ export default function AnalyzingScreen() {
         const analysis = result.analysis;
         
         // Save to history and increment scan count
-        incrementScans();
-        addToHistory({
+        await safeIncrementScans();
+        await safeAddToHistory({
           id: Date.now().toString(),
           imageUri: imageUri as string,
           analysis,
@@ -297,8 +314,8 @@ export default function AnalyzingScreen() {
             };
             
             // Save to history and increment scan count
-            incrementScans();
-            addToHistory({
+            await safeIncrementScans();
+            await safeAddToHistory({
               id: Date.now().toString(),
               imageUri: imageUri as string,
               analysis: offlineAnalysis,
@@ -336,7 +353,7 @@ export default function AnalyzingScreen() {
     if (imageUri) {
       analyzeImage();
     }
-  }, [imageUri, incrementScans, addToHistory]);
+  }, [imageUri, safeIncrementScans, safeAddToHistory]);
 
 
 

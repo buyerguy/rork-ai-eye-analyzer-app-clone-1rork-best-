@@ -21,12 +21,21 @@ import { trpcClient } from "@/lib/trpc";
 
 export default function HomeScreen() {
   const { scansUsed, weeklyLimit, isDeveloperMode, checkQuota, isDarkMode } = useApp();
+  
+  // Add safety check for functions
+  const safeCheckQuota = () => {
+    if (typeof checkQuota === 'function') {
+      return checkQuota();
+    }
+    console.warn('checkQuota function not available');
+    return false;
+  };
   const [loading, setLoading] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showShotTips, setShowShotTips] = useState(false);
 
   const handleUploadPhoto = async () => {
-    if (!checkQuota()) {
+    if (!safeCheckQuota()) {
       Alert.alert(
         "Scan Limit Reached",
         "You've used all your free scans this week. Upgrade to premium for unlimited scans.",
@@ -51,7 +60,7 @@ export default function HomeScreen() {
   };
 
   const handleUseCamera = async () => {
-    if (!checkQuota()) {
+    if (!safeCheckQuota()) {
       Alert.alert(
         "Scan Limit Reached",
         "You've used all your free scans this week. Upgrade to premium for unlimited scans.",
