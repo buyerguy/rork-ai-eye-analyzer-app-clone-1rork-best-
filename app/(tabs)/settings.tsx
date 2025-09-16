@@ -8,43 +8,71 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
-  Linking,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { ChevronLeft, Trash2, Moon, Globe, CreditCard, Mail } from "lucide-react-native";
+import { ChevronLeft, Trash2, Moon, Globe, CreditCard, Mail, Star } from "lucide-react-native";
 import { router } from "expo-router";
 import { useApp } from "@/providers/AppProvider";
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
 export default function SettingsScreen() {
-  const { scansUsed, weeklyLimit, clearHistory, isDarkMode, setDarkMode } = useApp();
+  const { userData, isDarkMode, setDarkMode, clearHistory, isPro, mockPurchase } = useApp();
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     Alert.alert(
       "Clear History",
-      "Are you sure you want to clear all scan history?",
+      "Are you sure you want to clear all scan history? This action cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         { 
           text: "Clear", 
           style: "destructive",
-          onPress: () => {
-            clearHistory();
-            Alert.alert("Success", "Scan history cleared");
+          onPress: async () => {
+            try {
+              await clearHistory();
+              Alert.alert("Success", "History cleared successfully");
+            } catch (error) {
+              Alert.alert("Error", "Failed to clear history. Please try again.");
+            }
           }
         }
       ]
     );
   };
 
-  const handleManageSubscription = () => {
-    Linking.openURL('https://play.google.com/store/account/subscriptions');
+  const handleManageSubscription = async () => {
+    try {
+      await WebBrowser.openBrowserAsync('https://play.google.com/store/account/subscriptions');
+    } catch (error) {
+      console.error('Failed to open subscription management:', error);
+      Alert.alert('Error', 'Failed to open subscription management');
+    }
   };
 
-  const handleSupport = () => {
-    Linking.openURL('mailto:savemoresuppliers.com');
+  const handleSupport = async () => {
+    try {
+      const emailUrl = 'mailto:savemoresuppliers.com?subject=Iris Analyzer Support';
+      const canOpen = await Linking.canOpenURL(emailUrl);
+      if (canOpen) {
+        await Linking.openURL(emailUrl);
+      } else {
+        Alert.alert('Error', 'No email app found on your device');
+      }
+    } catch (error) {
+      console.error('Failed to open email:', error);
+      Alert.alert('Error', 'Failed to open email app');
+    }
   };
 
-
+  const handleMockPurchase = async () => {
+    try {
+      await mockPurchase();
+      Alert.alert('Success', 'Mock subscription activated!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to activate subscription');
+    }
+  };
 
   return (
     <LinearGradient
@@ -71,13 +99,15 @@ export default function SettingsScreen() {
               <View style={styles.settingLeft}>
                 <Globe size={20} color="#8a8aa0" />
                 <View>
-                  <Text style={[styles.settingLabel, { color: isDarkMode ? '#fff' : '#fff' }]}>Scans Used</Text>
+                  <Text style={[styles.settingLabel, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Scans Used</Text>
                   <Text style={[styles.settingDescription, { color: isDarkMode ? '#8a8aa0' : '#8a8aa0' }]}>
-                    {scansUsed} / {weeklyLimit} this week
+                    {userData?.scansUsed || 0} / {isPro ? '∞' : (userData?.weeklyLimit || 3)} this week
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.settingValue, { color: isDarkMode ? '#8a8aa0' : '#8a8aa0' }]}>Free</Text>
+              <Text style={[styles.settingValue, { color: isDarkMode ? '#8a8aa0' : '#8a8aa0' }]}>
+                {isPro ? 'Premium' : 'Free'}
+              </Text>
             </View>
           </View>
 
@@ -87,7 +117,7 @@ export default function SettingsScreen() {
             <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? 'rgba(138, 138, 160, 0.2)' : 'rgba(138, 138, 160, 0.1)' }]}>
               <View style={styles.settingLeft}>
                 <Moon size={20} color="#8a8aa0" />
-                <Text style={[styles.settingLabel, { color: isDarkMode ? '#fff' : '#fff' }]}>Dark Mode</Text>
+                <Text style={[styles.settingLabel, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Dark Mode</Text>
               </View>
               <Switch
                 value={isDarkMode}
@@ -101,18 +131,47 @@ export default function SettingsScreen() {
           {/* Support */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: isDarkMode ? '#8a8aa0' : '#8a8aa0' }]}>Support</Text>
-            <TouchableOpacity style={[styles.settingItem, { borderBottomColor: isDarkMode ? 'rgba(138, 138, 160, 0.2)' : 'rgba(138, 138, 160, 0.1)' }]} onPress={handleManageSubscription}>
+            <TouchableOpacity 
+              style={[styles.settingItem, { borderBottomColor: isDarkMode ? 'rgba(138, 138, 160, 0.2)' : 'rgba(138, 138, 160, 0.1)' }]} 
+              onPress={handleManageSubscription}
+            >
               <View style={styles.settingLeft}>
                 <CreditCard size={20} color="#8a8aa0" />
-                <Text style={[styles.settingLabel, { color: isDarkMode ? '#fff' : '#fff' }]}>Manage Subscription</Text>
+                <View>
+                  <Text style={[styles.settingLabel, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Manage Subscription</Text>
+                  <Text style={[styles.settingDescription, { color: isDarkMode ? '#8a8aa0' : '#8a8aa0' }]}>
+                    {isPro ? 'Premium Active' : 'Free Plan'}
+                  </Text>
+                </View>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.settingItem, { borderBottomColor: isDarkMode ? 'rgba(138, 138, 160, 0.2)' : 'rgba(138, 138, 160, 0.1)' }]} onPress={handleSupport}>
+            <TouchableOpacity 
+              style={[styles.settingItem, { borderBottomColor: isDarkMode ? 'rgba(138, 138, 160, 0.2)' : 'rgba(138, 138, 160, 0.1)' }]} 
+              onPress={handleSupport}
+            >
               <View style={styles.settingLeft}>
                 <Mail size={20} color="#8a8aa0" />
-                <Text style={[styles.settingLabel, { color: isDarkMode ? '#fff' : '#fff' }]}>Support</Text>
+                <Text style={[styles.settingLabel, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Support</Text>
               </View>
             </TouchableOpacity>
+            
+            {/* Mock purchase button for development */}
+            {!isPro && (
+              <TouchableOpacity 
+                style={[styles.settingItem, { borderBottomColor: isDarkMode ? 'rgba(138, 138, 160, 0.2)' : 'rgba(138, 138, 160, 0.1)' }]} 
+                onPress={handleMockPurchase}
+              >
+                <View style={styles.settingLeft}>
+                  <Star size={20} color="#4dd0e1" />
+                  <View>
+                    <Text style={[styles.settingLabel, { color: '#4dd0e1' }]}>Activate Premium (Dev)</Text>
+                    <Text style={[styles.settingDescription, { color: isDarkMode ? '#8a8aa0' : '#8a8aa0' }]}>
+                      Mock subscription for testing
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Data & Privacy */}
