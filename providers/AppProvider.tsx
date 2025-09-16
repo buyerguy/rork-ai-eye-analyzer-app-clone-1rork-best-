@@ -22,6 +22,11 @@ interface AppContextType {
   // Dark mode
   isDarkMode: boolean;
   
+  // Quota properties
+  scansUsed: number;
+  weeklyLimit: number;
+  isDeveloperMode: boolean;
+  
   // Actions
   initializeApp: () => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -29,6 +34,7 @@ interface AppContextType {
   clearHistory: () => Promise<void>;
   mockPurchase: () => Promise<void>;
   setDarkMode: (value: boolean) => void;
+  checkQuota: () => boolean;
 }
 
 export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
@@ -40,6 +46,7 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDeveloperMode] = useState(__DEV__);
 
   // Initialize app and Firebase auth
   const initializeApp = useCallback(async () => {
@@ -159,6 +166,18 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     return unsubscribe;
   }, []);
 
+  // Check quota function
+  const checkQuota = useCallback(() => {
+    if (isPro) return true; // Pro users have unlimited scans
+    const currentScansUsed = userData?.scansUsed || 0;
+    const currentWeeklyLimit = userData?.weeklyLimit || 3;
+    return currentScansUsed < currentWeeklyLimit;
+  }, [isPro, userData?.scansUsed, userData?.weeklyLimit]);
+
+  // Computed values
+  const scansUsed = userData?.scansUsed || 0;
+  const weeklyLimit = userData?.weeklyLimit || 3;
+
   return useMemo(() => ({
     user,
     isAuthLoading,
@@ -168,12 +187,16 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     isHistoryLoading,
     isPro,
     isDarkMode,
+    scansUsed,
+    weeklyLimit,
+    isDeveloperMode,
     initializeApp,
     refreshUserData,
     refreshProStatus,
     clearHistory,
     mockPurchase,
-    setDarkMode: setIsDarkMode
+    setDarkMode: setIsDarkMode,
+    checkQuota
   }), [
     user,
     isAuthLoading,
@@ -183,10 +206,14 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     isHistoryLoading,
     isPro,
     isDarkMode,
+    scansUsed,
+    weeklyLimit,
+    isDeveloperMode,
     initializeApp,
     refreshUserData,
     refreshProStatus,
     clearHistory,
-    mockPurchase
+    mockPurchase,
+    checkQuota
   ]);
 });
