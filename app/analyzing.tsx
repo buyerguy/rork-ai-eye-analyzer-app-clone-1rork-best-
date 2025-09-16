@@ -6,13 +6,11 @@ import {
   Image,
   ActivityIndicator,
   Alert,
-  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, router } from "expo-router";
 import { useApp } from "@/providers/AppProvider";
-import * as FileSystem from 'expo-file-system';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { analyzeIrisWithGemini } from "@/services/geminiService";
 
 export default function AnalyzingScreen() {
   const { imageUri } = useLocalSearchParams();
@@ -39,8 +37,9 @@ export default function AnalyzingScreen() {
   useEffect(() => {
     const analyzeImage = async () => {
       try {
-        // Simulate analysis steps
+        // Simulate analysis steps for better UX
         const steps = [
+          "Uploading to secure storage",
           "Contacting AI service",
           "Processing iris patterns",
           "Analyzing color distribution",
@@ -51,208 +50,21 @@ export default function AnalyzingScreen() {
         for (let i = 0; i < steps.length; i++) {
           setStatus(`${steps[i]}...`);
           await new Promise((resolve) => {
-            if (resolve) setTimeout(resolve, 800);
+            if (resolve) setTimeout(resolve, 600);
           });
         }
 
-        // Handle image data for backend with compression
-        let imageData: string = '';
         const imageUriStr = imageUri as string;
         
-        setStatus('Preparing image for analysis...');
+        // Call the secure backend analysis service
+        console.log('Starting secure iris analysis...');
+        setStatus('Analyzing with secure AI backend...');
         
-        if (!imageUriStr.startsWith('data:image/') && Platform.OS !== 'web') {
-          // Compress image using ImageManipulator for mobile
-          try {
-            const manipulatedImage = await ImageManipulator.manipulateAsync(
-              imageUriStr,
-              [
-                { resize: { width: 800, height: 800 } }, // Resize to max 800x800
-              ],
-              {
-                compress: 0.7, // 70% quality
-                format: ImageManipulator.SaveFormat.JPEG,
-                base64: true,
-              }
-            );
-            
-            if (manipulatedImage.base64) {
-              imageData = `data:image/jpeg;base64,${manipulatedImage.base64}`;
-              console.log('Compressed image size:', Math.round(imageData.length / 1024), 'KB');
-            } else {
-              throw new Error('Failed to compress image');
-            }
-          } catch (compressionError) {
-            console.warn('Image compression failed, using original:', compressionError);
-            // Fallback to original method
-            const base64 = await FileSystem.readAsStringAsync(imageUriStr, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            imageData = `data:image/jpeg;base64,${base64}`;
-          }
-        } else if (imageUriStr.startsWith('data:image/')) {
-          // Image is already a data URI, check size
-          imageData = imageUriStr;
-          const sizeKB = Math.round(imageData.length / 1024);
-          console.log('Using processed data URI, size:', sizeKB, 'KB');
-          
-          // If image is too large, we need to compress it
-          if (imageData.length > 2 * 1024 * 1024) { // 2MB limit
-            console.log('Image too large, attempting compression...');
-            try {
-              // Extract base64 data and create a temporary file for compression
-              const base64Data = imageData.split(',')[1];
-              const tempUri = `${FileSystem.cacheDirectory}temp_image.jpg`;
-              await FileSystem.writeAsStringAsync(tempUri, base64Data, {
-                encoding: FileSystem.EncodingType.Base64,
-              });
-              
-              const manipulatedImage = await ImageManipulator.manipulateAsync(
-                tempUri,
-                [
-                  { resize: { width: 600, height: 600 } },
-                ],
-                {
-                  compress: 0.6,
-                  format: ImageManipulator.SaveFormat.JPEG,
-                  base64: true,
-                }
-              );
-              
-              if (manipulatedImage.base64) {
-                imageData = `data:image/jpeg;base64,${manipulatedImage.base64}`;
-                console.log('Compressed large image to:', Math.round(imageData.length / 1024), 'KB');
-              }
-              
-              // Clean up temp file
-              await FileSystem.deleteAsync(tempUri, { idempotent: true });
-            } catch (compressionError) {
-              console.warn('Failed to compress large image:', compressionError);
-              // Continue with original, but it might fail
-            }
-          }
-        } else if (Platform.OS === 'web') {
-          // For web, fetch the image and convert to base64
-          const response = await fetch(imageUriStr);
-          const blob = await response.blob();
-          imageData = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              if (typeof reader.result === 'string') {
-                resolve(reader.result);
-              } else {
-                reject(new Error('Failed to read image as string'));
-              }
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        } else {
-          // Fallback case
-          throw new Error('Unable to process image format');
-        }
+        const analysis = await analyzeIrisWithGemini(imageUriStr);
+        console.log('Analysis completed successfully');
         
-        // Final validation
-        if (!imageData || imageData.length === 0) {
-          throw new Error('Failed to process image data');
-        }
-        
-        // Final size check
-        const finalSizeKB = Math.round(imageData.length / 1024);
-        console.log('Final image size for backend:', finalSizeKB, 'KB');
-        
-        if (imageData.length > 3 * 1024 * 1024) { // 3MB hard limit
-          throw new Error('Image is too large even after compression. Please use a smaller image.');
-        }
-
-        // Always use offline mode for now to avoid connection issues
-        console.log('Using offline analysis mode');
-        setStatus('Analyzing with offline AI...');
-        let result: any = null;
-        
-        // Simulate some processing time
-        await new Promise((resolve) => {
-          if (resolve) setTimeout(resolve, 1000);
-        });
-        
-        // Generate offline analysis
-        console.log('Generating offline analysis');
-        setStatus('Finalizing analysis...');
-        
-        // Create varied analysis based on some randomization
-        const patterns = [
-          {
-            name: "European Tapestry",
-            description: "The captivating blend of cool blue-grey with a warm central ring often hints at a diverse European heritage, possibly combining Northern and Central European lineages.",
-            uniquePatterns: ["Radiant Furrows", "Concentric Ring of Fire", "Defined Limbal Ring"]
-          },
-          {
-            name: "Nordic Constellation",
-            description: "Your iris displays the classic Nordic pattern with intricate stellar formations and crystalline structures that reflect ancient Scandinavian lineages.",
-            uniquePatterns: ["Stellar Crypts", "Crystalline Formations", "Nordic Rings"]
-          },
-          {
-            name: "Celtic Mosaic",
-            description: "The complex interweaving patterns and subtle color variations suggest Celtic heritage with its characteristic mosaic-like iris structure.",
-            uniquePatterns: ["Celtic Weave", "Emerald Flecks", "Ancient Spirals"]
-          }
-        ];
-        
-        const selectedPattern = patterns[Math.floor(Math.random() * patterns.length)];
-        
-        result = {
-          success: true,
-          analysis: {
-            pattern: {
-              name: selectedPattern.name,
-              description: selectedPattern.description,
-              metrics: {
-                prevalence: `${Math.floor(Math.random() * 20) + 5}%`,
-                regions: "Northern Europe, Central Europe",
-                genetic: `T${Math.floor(Math.random() * 20) + 1}`
-              }
-            },
-            sensitivity: {
-              name: "Sunlight Sensitivity",
-              description: "Lighter-colored eyes, like yours, contain less protective pigment against the sun's rays. It's a great reminder to don stylish sunglasses on bright days to keep those beautiful eyes happy!"
-            },
-            uniquePatterns: selectedPattern.uniquePatterns,
-            rarity: {
-              title: "A Rare Gem",
-              description: "While blue eyes are somewhat rare globally, your specific combination makes your eye color particularly unique, setting it apart from more common variations.",
-              percentage: Math.floor(Math.random() * 30) + 70
-            },
-            additionalInsights: [
-              {
-                icon: "🧬",
-                title: "The Reflective Sage",
-                description: "Individuals with this distinctive eye color often exude an aura of calm and depth, perceived as insightful, empathetic, and possessing a thoughtful, artistic spirit."
-              },
-              {
-                icon: "👁️",
-                title: "Unique Iris Signature",
-                description: "Your iris contains distinctive patterns and color variations that create a truly unique biometric signature, as individual as your fingerprint."
-              }
-            ],
-            summary: `Your iris reveals a fascinating ${selectedPattern.name} pattern with unique characteristics that make your eyes truly one-of-a-kind.`
-          },
-          timestamp: new Date().toISOString(),
-        };
-        
-        if (!result?.success) {
-          throw new Error(result?.error || 'Analysis failed');
-        }
-        
-        const analysis = result.analysis;
-        
-        // Save to history and increment scan count
+        // Increment scan count (history is automatically saved by the backend)
         await safeIncrementScans();
-        await safeAddToHistory({
-          id: Date.now().toString(),
-          imageUri: imageUri as string,
-          analysis,
-          timestamp: new Date().toISOString(),
-        });
 
         // Navigate to results
         router.replace({
@@ -313,7 +125,7 @@ export default function AnalyzingScreen() {
               summary: "Your iris shows beautiful natural patterns that make your eyes uniquely yours."
             };
             
-            // Save to history and increment scan count
+            // Increment scan count (using fallback analysis)
             await safeIncrementScans();
             await safeAddToHistory({
               id: Date.now().toString(),

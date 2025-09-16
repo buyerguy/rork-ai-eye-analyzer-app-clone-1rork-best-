@@ -11,6 +11,11 @@ service cloud.firestore {
       }
     }
     
+    // Allow feedback creation (anonymous feedback)
+    match /feedback/{feedbackId} {
+      allow create: if request.auth != null;
+    }
+    
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;
