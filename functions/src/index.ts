@@ -53,7 +53,7 @@ interface IrisAnalysis {
 }
 
 // Analyze Iris Function
-export const analyzeIris = functions.https.onCall(async (data: any, context: any) => {
+export const analyzeIris = functions.https.onCall(async (data: AnalyzeIrisData, context: functions.https.CallableContext) => {
   // Check authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
@@ -212,7 +212,7 @@ export const analyzeIris = functions.https.onCall(async (data: any, context: any
 });
 
 // Verify Google Play Purchase Function
-export const verifyGooglePlayPurchase = functions.https.onCall(async (data: any, context: any) => {
+export const verifyGooglePlayPurchase = functions.https.onCall(async (data: VerifyPurchaseData, context: functions.https.CallableContext) => {
   // Check authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
@@ -308,7 +308,7 @@ export const verifyGooglePlayPurchase = functions.https.onCall(async (data: any,
 });
 
 // Check subscription status function (optional helper)
-export const checkSubscriptionStatus = functions.https.onCall(async (data: any, context: any) => {
+export const checkSubscriptionStatus = functions.https.onCall(async (data: CheckSubscriptionData, context: functions.https.CallableContext) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
