@@ -359,6 +359,29 @@ class FirebaseService {
     }
   }
 
+  // Save analysis to history
+  async saveAnalysisToHistory(userId: string, historyData: {
+    imageStoragePath: string;
+    analysis: any;
+    timestamp: Date;
+  }): Promise<void> {
+    try {
+      const historyRef = collection(db, 'users', userId, 'history');
+      const docData = {
+        userId,
+        imageStoragePath: historyData.imageStoragePath,
+        analysis: historyData.analysis,
+        timestamp: historyData.timestamp
+      };
+      
+      await setDoc(doc(historyRef), docData);
+      console.log('Analysis saved to history for user:', userId);
+    } catch (error) {
+      console.error('Error saving analysis to history:', error);
+      throw error;
+    }
+  }
+
   // Get download URL for image (for displaying in history)
   async getImageDownloadURL(storagePath: string): Promise<string> {
     try {

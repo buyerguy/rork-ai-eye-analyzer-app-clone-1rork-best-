@@ -35,6 +35,8 @@ interface AppContextType {
   mockPurchase: () => Promise<void>;
   setDarkMode: (value: boolean) => void;
   checkQuota: () => boolean;
+  incrementScans: () => Promise<void>;
+  addToHistory: (historyItem: { id: string; imageUri: string; analysis: any; timestamp: string }) => Promise<void>;
 }
 
 export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
@@ -174,6 +176,43 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     return currentScansUsed < currentWeeklyLimit;
   }, [isPro, userData?.scansUsed, userData?.weeklyLimit]);
 
+  // Increment scans function
+  const incrementScans = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const currentScansUsed = userData?.scansUsed || 0;
+      const newScansUsed = currentScansUsed + 1;
+      await firebaseService.updateUserScans(user.uid, newScansUsed);
+      console.log('Scans incremented to:', newScansUsed);
+    } catch (error) {
+      console.error('Failed to increment scans:', error);
+      throw error;
+    }
+  }, [user, userData?.scansUsed]);
+
+  // Add to history function
+  const addToHistory = useCallback(async (historyItem: { id: string; imageUri: string; analysis: any; timestamp: string }) => {
+    if (!user) return;
+    
+    try {
+      // Upload image to Firebase Storage
+      const imageStoragePath = await firebaseService.uploadImage(historyItem.imageUri, user.uid);
+      
+      // Save analysis to Firestore history
+      await firebaseService.saveAnalysisToHistory(user.uid, {
+        imageStoragePath,
+        analysis: historyItem.analysis,
+        timestamp: new Date(historyItem.timestamp)
+      });
+      
+      console.log('Analysis saved to history');
+    } catch (error) {
+      console.error('Failed to add to history:', error);
+      throw error;
+    }
+  }, [user]);
+
   // Computed values
   const scansUsed = userData?.scansUsed || 0;
   const weeklyLimit = userData?.weeklyLimit || 3;
@@ -196,7 +235,9 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     clearHistory,
     mockPurchase,
     setDarkMode: setIsDarkMode,
-    checkQuota
+    checkQuota,
+    incrementScans,
+    addToHistory
   }), [
     user,
     isAuthLoading,
@@ -214,6 +255,8 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     refreshProStatus,
     clearHistory,
     mockPurchase,
-    checkQuota
+    checkQuota,
+    incrementScans,
+    addToHistory
   ]);
 });
