@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
 import { db, storage, auth } from './firebaseConfig';
 import { Platform } from 'react-native';
 
@@ -69,6 +69,17 @@ export interface IrisAnalysis {
 class FirebaseService {
   private currentUser: User | null = null;
   private functions = getFunctions();
+  
+  constructor() {
+    // Connect to functions emulator in development
+    if (__DEV__ && Platform.OS !== 'web') {
+      try {
+        connectFunctionsEmulator(this.functions, 'localhost', 5001);
+      } catch (error) {
+        console.log('Functions emulator connection failed:', error);
+      }
+    }
+  }
   
   // Initialize Firebase Auth and sign in anonymously
   async initializeAuth(): Promise<User> {

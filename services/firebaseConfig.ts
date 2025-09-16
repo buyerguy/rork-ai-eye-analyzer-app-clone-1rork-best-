@@ -4,12 +4,13 @@ import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD5QhgdT8Ogoz91ih0YCgAfldnL8U6r9fE",
-  authDomain: "iris-analyzer-app.firebaseapp.com",
-  projectId: "iris-analyzer-app",
-  storageBucket: "iris-analyzer-app.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcdef123456789012345"
+  apiKey: "AIzaSyDCUfubbyWL01w1PWxQDzQGxkulbAcAxRE",
+  authDomain: "onlyone-99913.firebaseapp.com",
+  projectId: "onlyone-99913",
+  storageBucket: "onlyone-99913.firebasestorage.app",
+  messagingSenderId: "355889657524",
+  appId: "1:355889657524:web:9854389af49862a0c789e1",
+  measurementId: "G-Z6WMXCRJ9N"
 };
 
 // Check if Firebase app is already initialized

@@ -218,7 +218,7 @@ export const verifyGooglePlayPurchase = functions.https.onCall(async (data, cont
     const androidpublisher = google.androidpublisher({ version: 'v3', auth: authClient });
 
     // Verify the purchase with Google Play
-    const packageName = 'com.yourapp.irisanalyzer'; // Replace with your actual package name
+    const packageName = 'com.auravisionai.auravisionai'; // Your actual package name
     
     const result = await androidpublisher.purchases.subscriptions.get({
       packageName,
