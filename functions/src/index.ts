@@ -2,6 +2,20 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { GoogleAuth } from 'google-auth-library';
 
+// Type definitions for function parameters
+interface AnalyzeIrisData {
+  imageStoragePath: string;
+}
+
+interface VerifyPurchaseData {
+  purchaseToken: string;
+  productId: string;
+}
+
+interface CheckSubscriptionData {
+  // No specific data needed for this function
+}
+
 // Initialize Firebase Admin
 admin.initializeApp();
 
@@ -39,7 +53,7 @@ interface IrisAnalysis {
 }
 
 // Analyze Iris Function
-export const analyzeIris = functions.https.onCall(async (data, context) => {
+export const analyzeIris = functions.https.onCall(async (data: AnalyzeIrisData, context: functions.https.CallableContext) => {
   // Check authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
@@ -198,7 +212,7 @@ export const analyzeIris = functions.https.onCall(async (data, context) => {
 });
 
 // Verify Google Play Purchase Function
-export const verifyGooglePlayPurchase = functions.https.onCall(async (data, context) => {
+export const verifyGooglePlayPurchase = functions.https.onCall(async (data: VerifyPurchaseData, context: functions.https.CallableContext) => {
   // Check authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
@@ -294,7 +308,7 @@ export const verifyGooglePlayPurchase = functions.https.onCall(async (data, cont
 });
 
 // Check subscription status function (optional helper)
-export const checkSubscriptionStatus = functions.https.onCall(async (data, context) => {
+export const checkSubscriptionStatus = functions.https.onCall(async (data: CheckSubscriptionData, context: functions.https.CallableContext) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
