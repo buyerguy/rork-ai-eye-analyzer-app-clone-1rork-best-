@@ -25,7 +25,7 @@ interface CameraScreenProps {
 }
 
 export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) {
-  const [facing, setFacing] = useState<CameraType>('back');
+  const [facing, setFacing] = useState<CameraType>('front');
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
