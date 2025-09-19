@@ -37,9 +37,8 @@ export async function analyzeIrisWithGemini(imageUri: string): Promise<IrisAnaly
     throw new Error('Invalid image URI provided');
   }
   
-  if (imageUri.length > 10000) {
-    throw new Error('Image URI too long');
-  }
+  // Remove the length check for base64 images as they are naturally long
+  // Base64 images can be 100k+ characters, which is normal
   
   const sanitizedImageUri = imageUri.trim();
   

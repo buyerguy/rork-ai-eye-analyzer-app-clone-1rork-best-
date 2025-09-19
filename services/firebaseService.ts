@@ -197,15 +197,34 @@ class FirebaseService {
 
       let blob: Blob;
       
-      if (Platform.OS === 'web') {
-        const response = await fetch(imageUri);
-        blob = await response.blob();
+      // Handle base64 data URIs
+      if (imageUri.startsWith('data:')) {
+        console.log('Converting base64 data URI to blob...');
+        // Extract base64 data from data URI
+        const base64Data = imageUri.split(',')[1];
+        const mimeType = imageUri.split(';')[0].split(':')[1];
+        
+        // Convert base64 to binary
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        blob = new Blob([bytes], { type: mimeType });
+        console.log('Base64 converted to blob, size:', blob.size, 'bytes');
       } else {
-        // For mobile, convert URI to blob
+        // Handle regular file URIs
+        console.log('Fetching image from URI...');
         const response = await fetch(imageUri);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        }
         blob = await response.blob();
+        console.log('Image fetched, size:', blob.size, 'bytes');
       }
 
+      console.log('Uploading to Firebase Storage...');
       await uploadBytes(imageRef, blob);
       
       console.log('Image uploaded successfully to:', storagePath);
