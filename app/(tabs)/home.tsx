@@ -60,34 +60,15 @@ export default function HomeScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: Platform.OS === 'web' ? 0.5 : 0.7, // Lower quality for web
+        quality: 0.8, // Reduce quality to prevent "URI too long" errors
         allowsMultipleSelection: false,
-        base64: false, // Don't convert to base64 in picker
-        exif: false, // Don't include EXIF data
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedImage = result.assets[0];
-        console.log('Image selected:', {
-          uri: selectedImage.uri,
-          width: selectedImage.width,
-          height: selectedImage.height,
-          fileSize: selectedImage.fileSize
-        });
-        
-        // Check file size (limit to 5MB)
-        if (selectedImage.fileSize && selectedImage.fileSize > 5 * 1024 * 1024) {
-          Alert.alert(
-            'File Too Large',
-            'Please select an image smaller than 5MB.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-        
+        console.log('Image selected:', result.assets[0].uri);
         router.push({
           pathname: "/analyzing" as any,
-          params: { imageUri: selectedImage.uri }
+          params: { imageUri: result.assets[0].uri }
         });
       }
     } catch (error) {
@@ -111,41 +92,8 @@ export default function HomeScreen() {
     }
 
     try {
-      // For web, use image picker as camera fallback
-      if (Platform.OS === 'web') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert(
-            'Permission Required',
-            'We need access to your camera/photos to capture images.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.5,
-          allowsMultipleSelection: false,
-          base64: false,
-          exif: false,
-        });
-
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-          const selectedImage = result.assets[0];
-          console.log('Image selected via web camera fallback:', selectedImage.uri);
-          
-          router.push({
-            pathname: "/analyzing" as any,
-            params: { imageUri: selectedImage.uri }
-          });
-        }
-      } else {
-        // Navigate to dedicated camera screen for mobile
-        router.push('/camera');
-      }
+      // Navigate to dedicated camera screen
+      router.push('/camera');
     } catch (error) {
       console.error('Error opening camera:', error);
       Alert.alert(

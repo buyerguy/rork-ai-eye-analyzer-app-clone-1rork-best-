@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import createContextHook from '@nkzw/create-context-hook';
 import { firebaseService, UserData, AnalysisHistory } from '@/services/firebaseService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AppContextType {
   // Auth state
@@ -38,11 +37,6 @@ interface AppContextType {
   checkQuota: () => boolean;
   incrementScans: () => Promise<void>;
   addToHistory: (historyItem: { id: string; imageUri: string; analysis: any; timestamp: string }) => Promise<void>;
-  
-  // Local storage functions
-  getLocalHistory: () => Promise<any[]>;
-  clearLocalHistory: () => Promise<void>;
-  saveToLocalStorage: (historyItem: { id: string; imageUri: string; analysis: any; timestamp: string }) => Promise<void>;
 }
 
 export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
@@ -197,52 +191,27 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     }
   }, [user, userData?.scansUsed]);
 
-  // Local storage functions
-  const saveToLocalStorage = useCallback(async (historyItem: { id: string; imageUri: string; analysis: any; timestamp: string }) => {
-    try {
-      const stored = await AsyncStorage.getItem('iris_analysis_history');
-      const existingHistory = stored ? JSON.parse(stored) : [];
-      const newHistory = [historyItem, ...existingHistory].slice(0, 50); // Keep only last 50 items
-      await AsyncStorage.setItem('iris_analysis_history', JSON.stringify(newHistory));
-      console.log('Analysis saved to local storage');
-    } catch (error) {
-      console.error('Failed to save to local storage:', error);
-      throw error;
-    }
-  }, []);
-  
   // Add to history function
   const addToHistory = useCallback(async (historyItem: { id: string; imageUri: string; analysis: any; timestamp: string }) => {
+    if (!user) return;
+    
     try {
-      if (user) {
-        // Save to Firebase for authenticated users
-        const imageStoragePath = await firebaseService.uploadImage(historyItem.imageUri, user.uid);
-        await firebaseService.saveAnalysisToHistory(user.uid, {
-          imageStoragePath,
-          analysis: historyItem.analysis,
-          timestamp: new Date(historyItem.timestamp)
-        });
-        console.log('Analysis saved to Firebase history');
-      } else {
-        // Save to local storage for anonymous users
-        await saveToLocalStorage(historyItem);
-      }
+      // Upload image to Firebase Storage
+      const imageStoragePath = await firebaseService.uploadImage(historyItem.imageUri, user.uid);
+      
+      // Save analysis to Firestore history
+      await firebaseService.saveAnalysisToHistory(user.uid, {
+        imageStoragePath,
+        analysis: historyItem.analysis,
+        timestamp: new Date(historyItem.timestamp)
+      });
+      
+      console.log('Analysis saved to history');
     } catch (error) {
       console.error('Failed to add to history:', error);
-      // Try local storage as fallback even for authenticated users
-      if (user) {
-        try {
-          await saveToLocalStorage(historyItem);
-          console.log('Fallback: Analysis saved to local storage');
-        } catch (fallbackError) {
-          console.error('Fallback storage also failed:', fallbackError);
-          throw error;
-        }
-      } else {
-        throw error;
-      }
+      throw error;
     }
-  }, [user, saveToLocalStorage]);
+  }, [user]);
 
   // Computed values
   const scansUsed = userData?.scansUsed || 0;
@@ -268,25 +237,7 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     setDarkMode: setIsDarkMode,
     checkQuota,
     incrementScans,
-    addToHistory,
-    getLocalHistory: async () => {
-      try {
-        const stored = await AsyncStorage.getItem('iris_analysis_history');
-        return stored ? JSON.parse(stored) : [];
-      } catch (error) {
-        console.error('Failed to get local history:', error);
-        return [];
-      }
-    },
-    clearLocalHistory: async () => {
-      try {
-        await AsyncStorage.removeItem('iris_analysis_history');
-      } catch (error) {
-        console.error('Failed to clear local history:', error);
-        throw error;
-      }
-    },
-    saveToLocalStorage
+    addToHistory
   }), [
     user,
     isAuthLoading,
@@ -306,7 +257,6 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     mockPurchase,
     checkQuota,
     incrementScans,
-    addToHistory,
-    saveToLocalStorage
+    addToHistory
   ]);
 });

@@ -1,190 +1,111 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ScrollView,
+  SafeAreaView,
   Image,
-  ActivityIndicator,
 } from "react-native";
-import { Eye, Calendar, ChevronRight, Trash2 } from "lucide-react-native";
+import { Eye, Calendar, ChevronRight } from "lucide-react-native";
 import { router } from "expo-router";
 import { useApp } from "@/providers/AppProvider";
-import { firebaseService } from "@/services/firebaseService";
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface HistoryItem {
-  id: string;
-  imageUri: string;
-  analysis: any;
-  timestamp: string;
-  date: string;
-  time: string;
-  rarity?: string;
-}
+// Mock data for history
+const historyData = [
+  {
+    id: 1,
+    date: "2025-09-12",
+    time: "2:28 PM",
+    imageUri: "https://images.unsplash.com/photo-1574158622682-e40e69881006?w=200&h=200&fit=crop&crop=face",
+    analysis: "Northern European Echoes",
+    rarity: "91% Rarity",
+  },
+  {
+    id: 2,
+    date: "2025-09-10",
+    time: "4:15 PM",
+    imageUri: "https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=200&fit=crop&crop=face",
+    analysis: "Mediterranean Warmth",
+    rarity: "73% Rarity",
+  },
+  {
+    id: 3,
+    date: "2025-09-08",
+    time: "11:30 AM",
+    imageUri: "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=200&h=200&fit=crop&crop=face",
+    analysis: "Celtic Heritage",
+    rarity: "85% Rarity",
+  },
+];
 
 export default function HistoryScreen() {
-  const { isDarkMode, user, analysisHistory, isHistoryLoading, clearHistory, getLocalHistory, clearLocalHistory } = useApp();
-  const [localHistory, setLocalHistory] = useState<HistoryItem[]>([]);
-  const [isLoadingLocal, setIsLoadingLocal] = useState(false);
-  const [showClearModal, setShowClearModal] = useState(false);
-  const insets = useSafeAreaInsets();
-  
-  // Load local history if user is not authenticated
-  const loadLocalHistory = useCallback(async () => {
-    if (user) return; // Skip if user is authenticated (use Firebase history)
+  const { isDarkMode } = useApp();
+  const handleViewAnalysis = (item: any) => {
+    if (!item?.analysis?.trim()) return;
     
-    try {
-      setIsLoadingLocal(true);
-      const history = await getLocalHistory();
-      setLocalHistory(history);
-    } catch (error) {
-      console.error('Error loading local history:', error);
-    } finally {
-      setIsLoadingLocal(false);
-    }
-  }, [user, getLocalHistory]);
-  
-  // Handle clear history button
-  const handleClearHistory = useCallback(() => {
-    setShowClearModal(true);
-  }, []);
-  
-  // Confirm clear history
-  const confirmClearHistory = useCallback(async () => {
-    try {
-      if (user) {
-        await clearHistory();
-      } else {
-        await clearLocalHistory();
-        setLocalHistory([]);
+    // Navigate to analysis screen with mock data
+    const mockAnalysis = {
+      pattern: {
+        name: item.analysis,
+        description: "Your unique iris pattern tells a fascinating story.",
+        metrics: {
+          prevalence: "9%",
+          regions: "Northern Europe, Scandinavia",
+          genetic: "1:12"
+        }
+      },
+      sensitivity: {
+        name: "Radiant Light Sensitivity",
+        description: "Your eyes might be more sensitive to bright sunlight."
+      },
+      uniquePatterns: ["Radiant Crypts", "Distinct Limbal Ring"],
+      rarity: {
+        title: "A Touch of Rarity",
+        description: "Your eye color is quite rare in the global population.",
+        percentage: parseInt(item.rarity) || 50
+      },
+      additionalInsights: [
+        {
+          icon: "🌊",
+          title: "Your Unique Azure Blueprint",
+          description: "Your iris boasts an intricate arrangement of delicate fibers."
+        }
+      ]
+    };
+
+    router.push({
+      pathname: "/analysis" as any,
+      params: { 
+        imageUri: item.imageUri,
+        analysisData: JSON.stringify(mockAnalysis)
       }
-      setShowClearModal(false);
-    } catch (error) {
-      console.error('Error clearing history:', error);
-    }
-  }, [user, clearHistory, clearLocalHistory]);
-  
-  // Load local history on component mount
-  useEffect(() => {
-    loadLocalHistory();
-  }, [loadLocalHistory]);
-  
-  // Get display history (Firebase or local)
-  const displayHistory = user ? analysisHistory : localHistory;
-  const isLoading = user ? isHistoryLoading : isLoadingLocal;
-  
-  // Convert Firebase history to display format
-  const formatHistoryForDisplay = useCallback((history: any[]): HistoryItem[] => {
-    return history.map((item) => {
-      let imageUri = item.imageUri;
-      let analysis = item.analysis;
-      let timestamp = item.timestamp;
-      
-      // Handle Firebase history format
-      if (item.imageStoragePath && !item.imageUri) {
-        // For Firebase history, we'll need to get the download URL
-        // For now, use a placeholder or the storage path
-        imageUri = item.imageStoragePath;
-      }
-      
-      // Handle timestamp conversion
-      let date: Date;
-      if (timestamp?.toDate) {
-        date = timestamp.toDate();
-      } else if (timestamp) {
-        date = new Date(timestamp);
-      } else {
-        date = new Date();
-      }
-      
-      return {
-        id: item.id,
-        imageUri,
-        analysis,
-        timestamp: date.toISOString(),
-        date: date.toLocaleDateString(),
-        time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        rarity: analysis?.rarity?.percentage ? `${analysis.rarity.percentage}% Rarity` : undefined
-      };
     });
-  }, []);
-  
-  const formattedHistory = formatHistoryForDisplay(displayHistory);
-  
-  const handleViewAnalysis = useCallback(async (item: HistoryItem) => {
-    if (!item?.id?.trim()) return;
-    
-    try {
-      let imageUri = item.imageUri;
-      
-      // If this is a Firebase storage path, get the download URL
-      if (user && item.imageUri && !item.imageUri.startsWith('http') && !item.imageUri.startsWith('file://') && !item.imageUri.startsWith('data:')) {
-        try {
-          imageUri = await firebaseService.getImageDownloadURL(item.imageUri);
-        } catch (error) {
-          console.error('Error getting download URL:', error);
-          // Use original URI as fallback
-        }
-      }
-      
-      router.push({
-        pathname: "/analysis" as any,
-        params: { 
-          imageUri,
-          analysisData: JSON.stringify(item.analysis)
-        }
-      });
-    } catch (error) {
-      console.error('Error viewing analysis:', error);
-    }
-  }, [user]);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: isDarkMode ? '#1a1a3e' : '#f8fafc' }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
-        <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Analysis History</Text>
-          <Text style={[styles.subtitle, { color: isDarkMode ? '#a0a0b8' : '#6b7280' }]}>Your previous iris analyses</Text>
-        </View>
-        {formattedHistory.length > 0 && (
-          <TouchableOpacity 
-            style={styles.clearButton}
-            onPress={handleClearHistory}
-          >
-            <Trash2 size={20} color={isDarkMode ? '#ff6b6b' : '#ef4444'} />
-          </TouchableOpacity>
-        )}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Analysis History</Text>
+        <Text style={[styles.subtitle, { color: isDarkMode ? '#a0a0b8' : '#6b7280' }]}>Your previous iris analyses</Text>
       </View>
 
       <ScrollView 
         style={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={isDarkMode ? '#4dd0e1' : '#7c4dff'} />
-            <Text style={[styles.loadingText, { color: isDarkMode ? '#a0a0b8' : '#6b7280' }]}>
-              Loading your analysis history...
-            </Text>
-          </View>
-        ) : formattedHistory.length === 0 ? (
+        {historyData.length === 0 ? (
           <View style={styles.emptyState}>
             <Eye size={48} color={isDarkMode ? '#6b7280' : '#9ca3af'} />
             <Text style={[styles.emptyTitle, { color: isDarkMode ? '#e5e7eb' : '#374151' }]}>No analyses yet</Text>
             <Text style={[styles.emptyDescription, { color: isDarkMode ? '#a0a0b8' : '#6b7280' }]}>
               Start by analyzing your first iris photo
             </Text>
-            {!user && (
-              <Text style={[styles.offlineNote, { color: isDarkMode ? '#8a8aa0' : '#9ca3af' }]}>
-                Sign in to sync your history across devices
-              </Text>
-            )}
           </View>
         ) : (
           <View style={styles.historyList}>
-            {formattedHistory.map((item) => (
+            {historyData.map((item) => (
               <TouchableOpacity
                 key={item.id}
                 style={[styles.historyItem, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}
@@ -192,31 +113,15 @@ export default function HistoryScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.imageContainer}>
-                  {item.imageUri && item.imageUri.startsWith('http') ? (
-                    <Image 
-                      source={{ uri: item.imageUri }} 
-                      style={styles.eyeImage}
-                      defaultSource={require('@/assets/images/icon.png')}
-                    />
-                  ) : (
-                    <View style={[styles.eyeImagePlaceholder, { backgroundColor: isDarkMode ? '#3a3a5a' : '#e5e7eb' }]}>
-                      <Eye size={24} color={isDarkMode ? '#6b7280' : '#9ca3af'} />
-                    </View>
-                  )}
+                  <Image source={{ uri: item.imageUri }} style={styles.eyeImage} />
                 </View>
                 
                 <View style={styles.itemContent}>
-                  <Text style={[styles.analysisTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>
-                    {item.analysis?.pattern?.name || item.analysis?.summary || 'Iris Analysis'}
-                  </Text>
-                  {item.rarity && (
-                    <Text style={styles.rarityText}>{item.rarity}</Text>
-                  )}
+                  <Text style={[styles.analysisTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{item.analysis}</Text>
+                  <Text style={styles.rarityText}>{item.rarity}</Text>
                   <View style={styles.dateContainer}>
                     <Calendar size={14} color="#6b7280" />
-                    <Text style={[styles.dateText, { color: isDarkMode ? '#8a8aa0' : '#6b7280' }]}>
-                      {item.date} at {item.time}
-                    </Text>
+                    <Text style={[styles.dateText, { color: isDarkMode ? '#8a8aa0' : '#6b7280' }]}>{item.date} at {item.time}</Text>
                   </View>
                 </View>
                 
@@ -226,32 +131,6 @@ export default function HistoryScreen() {
           </View>
         )}
       </ScrollView>
-      
-      {/* Clear History Modal */}
-      {showClearModal && (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}>
-            <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Clear History</Text>
-            <Text style={[styles.modalText, { color: isDarkMode ? '#a0a0b8' : '#6b7280' }]}>
-              Are you sure you want to delete all your analysis history? This action cannot be undone.
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelModalButton]}
-                onPress={() => setShowClearModal(false)}
-              >
-                <Text style={styles.cancelModalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmModalButton]}
-                onPress={confirmClearHistory}
-              >
-                <Text style={styles.confirmModalButtonText}>Clear All</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -262,15 +141,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 24,
     paddingHorizontal: 16,
-  },
-  headerContent: {
-    flex: 1,
-    alignItems: 'center',
+    paddingTop: 60,
   },
   headerTitle: {
     fontSize: 24,
@@ -281,22 +155,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#6b7280',
-    textAlign: 'center',
-  },
-  clearButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginTop: 16,
     textAlign: 'center',
   },
   content: {
@@ -320,21 +178,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
-    marginBottom: 16,
-  },
-  offlineNote: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  eyeImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#e5e7eb',
   },
   historyList: {
     gap: 12,
@@ -389,65 +232,5 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
     color: '#6b7280',
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  modalContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    marginHorizontal: 20,
-    maxWidth: 400,
-    width: '100%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  modalText: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelModalButton: {
-    backgroundColor: '#f3f4f6',
-  },
-  confirmModalButton: {
-    backgroundColor: '#ef4444',
-  },
-  cancelModalButtonText: {
-    color: '#6b7280',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  confirmModalButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
