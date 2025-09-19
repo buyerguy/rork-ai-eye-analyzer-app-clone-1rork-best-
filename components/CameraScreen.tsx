@@ -168,25 +168,27 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
       try {
         console.log('Processing image for upload...');
         
-        // Compress and resize image for upload - more aggressive compression
-        const manipulatedImage = await ImageManipulator.manipulateAsync(
-          capturedImage,
-          [
-            { resize: { width: 512 } }, // Smaller size for better upload
-          ],
-          {
-            compress: 0.5, // More compression (50% quality)
-            format: ImageManipulator.SaveFormat.JPEG,
-            base64: true, // Get base64 for API
-          }
-        );
-        
-        if (manipulatedImage.base64) {
-          console.log('Image processed successfully, size:', manipulatedImage.base64.length);
-          onCapture(`data:image/jpeg;base64,${manipulatedImage.base64}`);
+        // For mobile platforms, just pass the file URI directly
+        // The backend will handle the image processing
+        if (Platform.OS !== 'web') {
+          console.log('Using file URI for mobile:', capturedImage);
+          onCapture(capturedImage);
         } else {
-          console.error('Failed to get base64 from manipulated image');
-          onCapture(capturedImage); // Fallback to original
+          // For web, we need to compress the image
+          const manipulatedImage = await ImageManipulator.manipulateAsync(
+            capturedImage,
+            [
+              { resize: { width: 512 } },
+            ],
+            {
+              compress: 0.7,
+              format: ImageManipulator.SaveFormat.JPEG,
+              base64: false, // Don't convert to base64 here
+            }
+          );
+          
+          console.log('Image processed for web:', manipulatedImage.uri);
+          onCapture(manipulatedImage.uri);
         }
       } catch (error) {
         console.error('Error processing image:', error);

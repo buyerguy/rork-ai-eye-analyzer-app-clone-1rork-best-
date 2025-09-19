@@ -44,18 +44,40 @@ export default function HomeScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
+    try {
+      // Request permissions first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'We need access to your photo library to upload images.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
 
-    if (!result.canceled) {
-      router.push({
-        pathname: "/analyzing" as any,
-        params: { imageUri: result.assets[0].uri }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8, // Reduce quality to prevent "URI too long" errors
+        allowsMultipleSelection: false,
       });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        console.log('Image selected:', result.assets[0].uri);
+        router.push({
+          pathname: "/analyzing" as any,
+          params: { imageUri: result.assets[0].uri }
+        });
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      Alert.alert(
+        'Error',
+        'Failed to select image. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -69,8 +91,17 @@ export default function HomeScreen() {
       return;
     }
 
-    // Navigate to dedicated camera screen
-    router.push('/camera');
+    try {
+      // Navigate to dedicated camera screen
+      router.push('/camera');
+    } catch (error) {
+      console.error('Error opening camera:', error);
+      Alert.alert(
+        'Error',
+        'Failed to open camera. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
