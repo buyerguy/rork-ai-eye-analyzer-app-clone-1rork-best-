@@ -63,8 +63,16 @@ export default function AnalyzingScreen() {
         const analysis = await analyzeIrisWithGemini(imageUriStr);
         console.log('Analysis completed successfully');
         
-        // Increment scan count (history is automatically saved by the backend)
+        // Increment scan count and save to history
         await safeIncrementScans();
+        
+        // Save analysis to history
+        await safeAddToHistory({
+          id: Date.now().toString(),
+          imageUri: imageUriStr,
+          analysis,
+          timestamp: new Date().toISOString(),
+        });
 
         // Navigate to results
         router.replace({
