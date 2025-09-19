@@ -31,6 +31,21 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+app/.env
+functions/.env
+
+# Firebase
+.firebase/
+functions/.runtimeconfig.json
+functions/lib/
+
+# Service account keys
+*.json
+!package*.json
+!tsconfig.json
+!firebase.json
+!firestore.indexes.json
 
 # typescript
 *.tsbuildinfo

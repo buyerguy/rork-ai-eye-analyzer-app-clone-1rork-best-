@@ -326,7 +326,12 @@ class FirebaseService {
   }
   
   // Mock Google Play purchase for development (since we can't use real billing in Expo Go)
+  // WARNING: This is for development only - remove in production
   async mockGooglePlayPurchase(): Promise<{ success: boolean; isPro: boolean; expiryTime: number }> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Mock purchases not allowed in production');
+    }
+    
     try {
       if (!this.currentUser) {
         throw new Error('User not authenticated');

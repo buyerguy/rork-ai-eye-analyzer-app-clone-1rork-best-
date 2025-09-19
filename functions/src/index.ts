@@ -22,7 +22,8 @@ admin.initializeApp();
 // Get configuration from Firebase Functions config
 const config = functions.config();
 const RORK_API_URL = 'https://toolkit.rork.com/text/llm/';
-const GOOGLE_PLAY_PACKAGE_NAME = 'com.auravisionai.auravisionai';
+// Use environment variable for package name with fallback
+const GOOGLE_PLAY_PACKAGE_NAME = process.env.GOOGLE_PLAY_PACKAGE_NAME || config.googleplay?.package_name || 'com.auravisionai.auravisionai';
 
 interface IrisAnalysis {
   pattern: {
@@ -228,7 +229,15 @@ export const verifyGooglePlayPurchase = functions.https.onCall(async (data: Veri
     console.log('Verifying Google Play purchase for user:', context.auth.uid);
     
     // Initialize Google Play Developer API
+    // Use service account key from environment or config
+    const serviceAccountKey = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY || config.googleplay?.service_account_key;
+    
+    if (!serviceAccountKey) {
+      console.warn('Google Play service account key not configured, using mock verification');
+    }
+    
     const auth = new GoogleAuth({
+      credentials: serviceAccountKey ? JSON.parse(serviceAccountKey) : undefined,
       scopes: ['https://www.googleapis.com/auth/androidpublisher']
     });
     

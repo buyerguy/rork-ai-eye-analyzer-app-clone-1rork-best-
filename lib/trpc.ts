@@ -8,6 +8,11 @@ import { Platform } from "react-native";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
+  // Use environment variable for API base URL
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+  
   // For development, use the Rork backend URL
   if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
     return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
@@ -24,24 +29,18 @@ const getBaseUrl = () => {
       return `${protocol}//${hostname}:${port}`;
     }
     
-    // For Android development, use the tunnel URL or localhost alternatives
+    // For Android development, use environment variable or fallback
     if (Platform.OS === 'android') {
-      // Try common Android development URLs
-      const androidUrls = [
-        'https://bfmg453bej9fyvi3p5njq.tunnel.rork.com',
-        'http://10.0.2.2:8081', // Android emulator
-        'http://192.168.1.100:8081', // Common local network
-        'https://toolkit.rork.com' // Fallback
-      ];
-      return androidUrls[0]; // Use tunnel URL for Android
+      const devUrl = process.env.EXPO_PUBLIC_DEV_API_URL || 'https://toolkit.rork.com';
+      return devUrl;
     }
     
     // For iOS development
-    return 'http://localhost:8081';
+    return process.env.EXPO_PUBLIC_DEV_API_URL || 'http://localhost:8081';
   }
   
-  // For production, fallback to a working URL
-  return 'https://toolkit.rork.com';
+  // For production, use environment variable or fallback
+  return process.env.EXPO_PUBLIC_PROD_API_URL || 'https://toolkit.rork.com';
 };
 
 // Compress image data to reduce payload size

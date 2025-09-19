@@ -31,8 +31,15 @@ app.use('*', async (c, next) => {
 });
 
 // Enable CORS for all routes with proper configuration
+const allowedOrigins = [
+  'http://localhost:8081',
+  'https://rork.com',
+  process.env.EXPO_PUBLIC_WEB_URL,
+  process.env.EXPO_PUBLIC_PROD_URL
+].filter(Boolean);
+
 app.use("*", cors({
-  origin: ['http://localhost:8081', 'https://rork.com', '*'],
+  origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
