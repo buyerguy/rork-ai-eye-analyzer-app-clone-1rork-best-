@@ -190,6 +190,15 @@ class FirebaseService {
 
   async uploadImage(imageUri: string, userId: string): Promise<string> {
     try {
+      // Validate input
+      if (!imageUri || typeof imageUri !== 'string' || imageUri.trim().length === 0) {
+        throw new Error('Invalid image URI provided');
+      }
+      
+      if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+        throw new Error('Invalid user ID provided');
+      }
+      
       const timestamp = Date.now();
       const imageId = `${timestamp}.jpg`;
       const storagePath = `user-uploads/${userId}/${imageId}`;
@@ -200,28 +209,66 @@ class FirebaseService {
       // Handle base64 data URIs
       if (imageUri.startsWith('data:')) {
         console.log('Converting base64 data URI to blob...');
-        // Extract base64 data from data URI
-        const base64Data = imageUri.split(',')[1];
-        const mimeType = imageUri.split(';')[0].split(':')[1];
-        
-        // Convert base64 to binary
-        const binaryString = atob(base64Data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        try {
+          // Extract base64 data from data URI
+          const base64Data = imageUri.split(',')[1];
+          if (!base64Data) {
+            throw new Error('Invalid base64 data URI format');
+          }
+          
+          const mimeType = imageUri.split(';')[0].split(':')[1] || 'image/jpeg';
+          
+          // Convert base64 to binary
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          blob = new Blob([bytes], { type: mimeType });
+          console.log('Base64 converted to blob, size:', blob.size, 'bytes');
+          
+          // Check blob size (limit to 10MB)
+          if (blob.size > 10 * 1024 * 1024) {
+            throw new Error('Image is too large (max 10MB)');
+          }
+        } catch (base64Error) {
+          console.error('Base64 conversion error:', base64Error);
+          throw new Error('Failed to process base64 image data');
         }
-        
-        blob = new Blob([bytes], { type: mimeType });
-        console.log('Base64 converted to blob, size:', blob.size, 'bytes');
       } else {
         // Handle regular file URIs
         console.log('Fetching image from URI...');
-        const response = await fetch(imageUri);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        try {
+          // Validate URI length (reasonable limit)
+          if (imageUri.length > 10000) {
+            throw new Error('Image URI is too long');
+          }
+          
+          const response = await fetch(imageUri);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+          }
+          
+          blob = await response.blob();
+          console.log('Image fetched, size:', blob.size, 'bytes');
+          
+          // Check blob size (limit to 10MB)
+          if (blob.size > 10 * 1024 * 1024) {
+            throw new Error('Image is too large (max 10MB)');
+          }
+          
+          // Validate blob type
+          if (!blob.type.startsWith('image/')) {
+            throw new Error('Invalid file type - must be an image');
+          }
+        } catch (fetchError) {
+          console.error('Image fetch error:', fetchError);
+          if (fetchError instanceof Error && fetchError.message.includes('too long')) {
+            throw new Error('Image URI too long');
+          }
+          throw new Error('Failed to fetch image from URI');
         }
-        blob = await response.blob();
-        console.log('Image fetched, size:', blob.size, 'bytes');
       }
 
       console.log('Uploading to Firebase Storage...');
@@ -231,7 +278,21 @@ class FirebaseService {
       return storagePath; // Return storage path instead of download URL
     } catch (error) {
       console.error('Error uploading image:', error);
-      throw error;
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('too long')) {
+          throw new Error('Image URI too long');
+        }
+        if (error.message.includes('too large')) {
+          throw new Error('Image is too large (max 10MB)');
+        }
+        if (error.message.includes('Invalid')) {
+          throw error; // Re-throw validation errors as-is
+        }
+      }
+      
+      throw new Error('Failed to upload image');
     }
   }
   
