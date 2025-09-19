@@ -279,17 +279,6 @@ class FirebaseService {
     } catch (error) {
       console.error('Error uploading image:', error);
       
-      // Development fallback - if Firebase Storage fails, return mock path
-      if (__DEV__ && error instanceof Error && 
-          (error.message.includes('unauthorized') || 
-           error.message.includes('permission') ||
-           error.message.includes('storage/unauthorized'))) {
-        console.log('🔧 DEV MODE: Using offline fallback for image upload');
-        const mockStoragePath = `mock-uploads/${userId}/${Date.now()}.jpg`;
-        console.log('Mock storage path:', mockStoragePath);
-        return mockStoragePath;
-      }
-      
       // Provide more specific error messages
       if (error instanceof Error) {
         if (error.message.includes('too long')) {
@@ -322,62 +311,8 @@ class FirebaseService {
       return result.data as IrisAnalysis;
     } catch (error) {
       console.error('Error analyzing iris:', error);
-      
-      // Development fallback - if Firebase functions fail, return mock analysis
-      if (__DEV__ && error instanceof Error && 
-          (error.message.includes('unauthorized') || 
-           error.message.includes('permission') ||
-           error.message.includes('storage/unauthorized') ||
-           error.message.includes('functions/') ||
-           error.message.includes('CORS'))) {
-        console.log('🔧 DEV MODE: Using offline fallback for iris analysis');
-        return this.getMockAnalysis();
-      }
-      
       throw error;
     }
-  }
-  
-  // Mock analysis for development fallback
-  private getMockAnalysis(): IrisAnalysis {
-    return {
-      pattern: {
-        name: "European Tapestry",
-        description: "The captivating blend of cool blue-grey with a warm central ring often hints at a diverse European heritage, possibly combining Northern and Central European lineages.",
-        metrics: {
-          prevalence: "92%",
-          regions: "Northern Europe, Central Europe",
-          genetic: "T13"
-        }
-      },
-      sensitivity: {
-        name: "Sunlight Sensitivity",
-        description: "Lighter-colored eyes, like yours, contain less protective pigment against the sun's rays. It's a great reminder to don stylish sunglasses on bright days to keep those beautiful eyes happy!"
-      },
-      uniquePatterns: [
-        "Radiant Furrows",
-        "Concentric Ring of Fire",
-        "Defined Limbal Ring"
-      ],
-      rarity: {
-        title: "A Rare Gem",
-        description: "While blue eyes are somewhat rare globally, your specific combination of blue-grey with pronounced central heterochromia and a distinct amber fleck makes your eye color particularly unique, setting it apart from more common variations.",
-        percentage: 85
-      },
-      additionalInsights: [
-        {
-          icon: "🧬",
-          title: "The Reflective Sage",
-          description: "Individuals with this distinctive eye color often exude an aura of calm and depth, perceived as insightful, empathetic, and possessing a thoughtful, artistic spirit."
-        },
-        {
-          icon: "👁️",
-          title: "Central Heterochromia & Amber Fleck",
-          description: "A prominent golden-amber ring encircles your pupil, a captivating feature known as central heterochromia, which beautifully contrasts with the cool blue-grey of your iris. Additionally, a charming small amber fleck graces the lower part of your iris, adding a truly unique signature."
-        }
-      ],
-      summary: "Your iris reveals a fascinating European Tapestry pattern with rare central heterochromia and unique amber flecks, making your eyes truly one-of-a-kind."
-    };
   }
   
   // Verify Google Play purchase
@@ -539,18 +474,6 @@ class FirebaseService {
       return await getDownloadURL(imageRef);
     } catch (error) {
       console.error('Error getting download URL:', error);
-      
-      // Development fallback - if Firebase Storage fails, return placeholder
-      if (__DEV__ && error instanceof Error && 
-          (error.message.includes('unauthorized') || 
-           error.message.includes('permission') ||
-           error.message.includes('storage/unauthorized') ||
-           error.message.includes('object-not-found'))) {
-        console.log('🔧 DEV MODE: Using placeholder image for download URL');
-        // Return a placeholder iris image URL
-        return 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=400&fit=crop&crop=center';
-      }
-      
       throw error;
     }
   }

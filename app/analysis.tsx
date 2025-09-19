@@ -61,68 +61,11 @@ const patternDescriptions: Record<string, PatternInfo> = {
 
 export default function AnalysisScreen() {
   const { isDarkMode } = useApp();
-  const { } = useLocalSearchParams();
+  const { imageUri, analysisData } = useLocalSearchParams();
+  const analysis = JSON.parse(analysisData as string);
   const [selectedPattern, setSelectedPattern] = useState<PatternInfo | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [expandedIndicators, setExpandedIndicators] = useState<Record<string, boolean>>({});
-  
-  // Mock data - always use this hardcoded data
-  const mockImageUri = "https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/kbckd9hmeti04febwqnk5";
-  
-  const mockAnalysis = {
-    dominantColor: {
-      name: "Blue-Grey",
-      confidence: 90
-    },
-    colorComposition: [
-      {
-        name: "Blue-Grey",
-        hex: "#72A9SF",
-        percentage: 60
-      },
-      {
-        name: "Golden-Brown",
-        hex: "#A8856B",
-        percentage: 20
-      },
-      {
-        name: "Light Grey",
-        hex: "#C8DCEB",
-        percentage: 15
-      },
-      {
-        name: "Dark Blue-Grey",
-        hex: "#485B6B",
-        percentage: 5
-      }
-    ],
-    uniquePatterns: ["Concentric Rings of Reflection", "Crypts of Deep Thought"],
-    rarity: {
-      title: "Rare Eye Pattern",
-      description: "Your iris displays a unique combination of patterns that are found in less than 10% of the population.",
-      percentage: 91
-    },
-    pattern: {
-      name: "Nordic Echoes",
-      description: "The clear, bright blue of your irises is a charming trait often found predominantly in populations tracing their origins back to Northern Europe."
-    },
-    sensitivity: {
-      name: "Light's Gentle Reminder",
-      description: "With less melanin to absorb light, your vibrant blue eyes may be more sensitive to bright sunlight. It's a fun reminder to shield them with stylish sunglasses on sunny days!"
-    },
-    additionalInsights: [
-      {
-        icon: "✨",
-        title: "Radiant Crypts",
-        description: "Observe the subtle, intricate openings within your iris, especially around the pupil, which create a captivating radial pattern, unique to your eye's architecture."
-      }
-    ],
-    summary: "Your iris analysis reveals a beautiful blue-grey eye with unique patterns and characteristics that make your eyes truly special."
-  };
-  
-  // Use mock data instead of parsed data
-  const analysis = mockAnalysis;
-  const displayImageUri = mockImageUri;
 
   const handlePatternPress = (patternName: string) => {
     const pattern = patternDescriptions[patternName];
@@ -147,7 +90,7 @@ export default function AnalysisScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out my iris analysis! ${analysis?.summary || 'Discover the unique patterns in your iris!'}`,
+        message: `Check out my iris analysis! ${analysis.summary}`,
       });
     } catch (error) {
       console.error("Share error:", error);
@@ -163,27 +106,32 @@ ${'='.repeat(50)}
 Generated on: ${new Date().toLocaleDateString()}
 
 🔍 IRIS PATTERN:
-${analysis?.pattern?.name || 'Pattern Analysis'}
-${analysis?.pattern?.description || 'Analyzing your unique iris patterns...'}
+${analysis.pattern.name}
+${analysis.pattern.description}
 
-🔍 UNIQUE PATTERNS DETECTED:
-${analysis?.uniquePatterns?.map((pattern: string) => `• ${pattern}`).join('\n') || '• Analyzing patterns...'}
+${analysis.pattern.metrics ? `📊 PATTERN METRICS:
+• Prevalence: ${analysis.pattern.metrics.prevalence}
+• Regions: ${analysis.pattern.metrics.regions}
+• Genetic: ${analysis.pattern.metrics.genetic}
+
+` : ''}🔍 UNIQUE PATTERNS DETECTED:
+${analysis.uniquePatterns.map((pattern: string) => `• ${pattern}`).join('\n')}
 
 💎 RARITY ANALYSIS:
-${analysis?.rarity?.title || 'Rarity Analysis'}
-${analysis?.rarity?.description || 'Analyzing the uniqueness of your iris patterns...'}
-Rarity Score: ${analysis?.rarity?.percentage || 50}%
+${analysis.rarity.title}
+${analysis.rarity.description}
+Rarity Score: ${analysis.rarity.percentage}%
 
 ☀️ LIGHT SENSITIVITY:
-${analysis?.sensitivity?.name || 'Light Sensitivity'}
-${analysis?.sensitivity?.description || 'Analyzing light sensitivity characteristics...'}
+${analysis.sensitivity.name}
+${analysis.sensitivity.description}
 
 ✨ ADDITIONAL INSIGHTS:
-${analysis?.additionalInsights?.map((insight: any) => `${insight?.icon || '✨'} ${insight?.title || 'Additional Insight'}:
-${insight?.description || 'Discovering more about your unique iris characteristics...'}`).join('\n\n') || 'Discovering unique characteristics...'}
+${analysis.additionalInsights.map((insight: any) => `${insight.icon} ${insight.title}:
+${insight.description}`).join('\n\n')}
 
 📝 SUMMARY:
-${analysis?.summary || 'Your iris analysis reveals unique and fascinating characteristics that make your eyes truly special.'}
+${analysis.summary}
 
 ${'='.repeat(50)}
 Disclaimer: This analysis is for entertainment purposes only and is not medical advice.
@@ -247,30 +195,37 @@ Generated by Iris Analysis App`;
           {/* Iris Image */}
           <View style={[styles.imageCard, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}>
             <View style={styles.imageContainer}>
-              <Image source={{ uri: displayImageUri }} style={styles.irisImage} />
+              <Image source={{ uri: imageUri as string }} style={styles.irisImage} />
             </View>
-            <Text style={[styles.dominantColorName, { color: isDarkMode ? '#1f2937' : '#1f2937' }]}>{analysis.dominantColor.name}</Text>
-            <Text style={[styles.dominantColorConfidence, { color: isDarkMode ? '#6b7280' : '#6b7280' }]}>Dominant Color ({analysis.dominantColor.confidence}% confidence)</Text>
+            {analysis.dominantColor ? (
+              <>
+                <Text style={[styles.dominantColorName, { color: isDarkMode ? '#1f2937' : '#1f2937' }]}>{analysis.dominantColor.name}</Text>
+                <Text style={[styles.dominantColorConfidence, { color: isDarkMode ? '#6b7280' : '#6b7280' }]}>Dominant Color ({analysis.dominantColor.confidence}% confidence)</Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.dominantColorName, { color: isDarkMode ? '#1f2937' : '#1f2937' }]}>Natural Eye Color</Text>
+                <Text style={[styles.dominantColorConfidence, { color: isDarkMode ? '#6b7280' : '#6b7280' }]}>Beautiful natural iris</Text>
+              </>
+            )}
           </View>
 
           {/* Color Composition Section */}
-          <View style={[styles.section, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}>
-            <Text style={[styles.colorCompositionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Color Composition</Text>
-            <View style={styles.colorCompositionList}>
-              {analysis.colorComposition.map((color: ColorComposition, index: number) => (
-                <View key={index} style={styles.colorItem}>
-                  <View style={styles.colorSwatchContainer}>
+          {analysis.colorComposition && analysis.colorComposition.length > 0 && (
+            <View style={[styles.section, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}>
+              <Text style={[styles.colorCompositionTitle, { color: isDarkMode ? '#1f2937' : '#1f2937' }]}>Color Composition</Text>
+              <View style={styles.colorCompositionList}>
+                {analysis.colorComposition.map((color: ColorComposition, index: number) => (
+                  <View key={index} style={styles.colorItem}>
                     <View style={[styles.colorSwatch, { backgroundColor: color.hex }]} />
+                    <Text style={[styles.colorName, { color: isDarkMode ? '#1f2937' : '#1f2937' }]}>{color.name}</Text>
+                    <Text style={[styles.colorHex, { color: isDarkMode ? '#6b7280' : '#6b7280' }]}>{color.hex}</Text>
+                    <Text style={[styles.colorPercentage, { color: isDarkMode ? '#1f2937' : '#1f2937' }]}>{color.percentage}%</Text>
                   </View>
-                  <View style={styles.colorInfo}>
-                    <Text style={[styles.colorName, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{color.name}</Text>
-                    <Text style={[styles.colorHex, { color: isDarkMode ? '#a0a0b8' : '#6b7280' }]}>{color.hex}</Text>
-                  </View>
-                  <Text style={[styles.colorPercentage, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{color.percentage}%</Text>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Unique Patterns Section */}
           <View style={[styles.section, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}>
@@ -279,7 +234,7 @@ Generated by Iris Analysis App`;
               <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Unique Patterns Detected</Text>
             </View>
             <View style={styles.patternTags}>
-              {analysis?.uniquePatterns?.map((pattern: string, index: number) => (
+              {analysis.uniquePatterns.map((pattern: string, index: number) => (
                 <TouchableOpacity 
                   key={index}
                   style={styles.patternTag}
@@ -287,7 +242,7 @@ Generated by Iris Analysis App`;
                 >
                   <Text style={styles.patternTagText}>• {pattern}</Text>
                 </TouchableOpacity>
-              )) || []}
+              ))}
             </View>
           </View>
 
@@ -295,62 +250,80 @@ Generated by Iris Analysis App`;
           <View style={[styles.section, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}>
             <View style={styles.sectionHeader}>
               <Text style={styles.rarityIcon}>💎</Text>
-              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis?.rarity?.title || 'Rarity Analysis'}</Text>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis.rarity.title}</Text>
             </View>
             <Text style={[styles.sectionDescription, { color: isDarkMode ? '#a0a0b8' : '#4b5563' }]}>
-              {analysis?.rarity?.description || 'Analyzing the uniqueness of your iris patterns...'}
+              {analysis.rarity.description}
             </Text>
             <View style={styles.rarityContainer}>
               <Text style={[styles.rarityLabel, { color: isDarkMode ? '#8a8aa0' : '#6b7280' }]}>Rare</Text>
               <Text style={[styles.rarityLabel, { color: isDarkMode ? '#8a8aa0' : '#6b7280' }]}>Common</Text>
             </View>
             <View style={styles.rarityBar}>
-              <View style={[styles.rarityFill, { width: `${analysis?.rarity?.percentage || 50}%` }]} />
+              <View style={[styles.rarityFill, { width: `${analysis.rarity.percentage}%` }]} />
             </View>
-            <Text style={styles.rarityPercentage}>{analysis?.rarity?.percentage || 50}% Rarity</Text>
+            <Text style={styles.rarityPercentage}>{analysis.rarity.percentage}% Rarity</Text>
           </View>
 
           {/* Pattern Details Section */}
           <TouchableOpacity 
             style={[styles.section, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}
-            onPress={() => handlePatternPress(analysis?.pattern?.name || 'Pattern Analysis')}
+            onPress={() => handlePatternPress(analysis.pattern.name)}
           >
             <View style={styles.sectionHeader}>
               <Text style={styles.rarityIcon}>🌍</Text>
-              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis?.pattern?.name || 'Pattern Analysis'}</Text>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis.pattern.name}</Text>
             </View>
             <Text style={[styles.sectionDescription, { color: isDarkMode ? '#a0a0b8' : '#4b5563' }]}>
-              {analysis?.pattern?.description || 'Analyzing your unique iris patterns...'}
+              {analysis.pattern.description}
             </Text>
-
+            {analysis.pattern.metrics && (
+              <View style={styles.metricsContainer}>
+                <View style={styles.metric}>
+                  <Text style={styles.metricIcon}>📊</Text>
+                  <Text style={[styles.metricLabel, { color: isDarkMode ? '#8a8aa0' : '#6b7280' }]}>Global Prevalence:</Text>
+                  <Text style={[styles.metricValue, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis.pattern.metrics.prevalence}</Text>
+                </View>
+                <View style={styles.metric}>
+                  <Text style={styles.metricIcon}>🌍</Text>
+                  <Text style={[styles.metricLabel, { color: isDarkMode ? '#8a8aa0' : '#6b7280' }]}>Regional Hotspots:</Text>
+                  <Text style={[styles.metricValue, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis.pattern.metrics.regions}</Text>
+                </View>
+                <View style={styles.metric}>
+                  <Text style={styles.metricIcon}>🧬</Text>
+                  <Text style={[styles.metricLabel, { color: isDarkMode ? '#8a8aa0' : '#6b7280' }]}>Genetic:</Text>
+                  <Text style={[styles.metricValue, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis.pattern.metrics.genetic}</Text>
+                </View>
+              </View>
+            )}
           </TouchableOpacity>
 
           {/* Light Sensitivity Section */}
           <TouchableOpacity 
             style={[styles.section, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}
-            onPress={() => handlePatternPress(analysis?.sensitivity?.name || 'Light Sensitivity')}
+            onPress={() => handlePatternPress(analysis.sensitivity.name)}
           >
             <View style={styles.sectionHeader}>
               <Text style={styles.rarityIcon}>☀️</Text>
-              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis?.sensitivity?.name || 'Light Sensitivity'}</Text>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{analysis.sensitivity.name}</Text>
             </View>
             <Text style={[styles.sectionDescription, { color: isDarkMode ? '#a0a0b8' : '#4b5563' }]}>
-              {analysis?.sensitivity?.description || 'Analyzing light sensitivity characteristics...'}
+              {analysis.sensitivity.description}
             </Text>
           </TouchableOpacity>
 
           {/* Additional Insights Sections */}
-          {analysis?.additionalInsights?.map((insight: any, index: number) => (
+          {analysis.additionalInsights.map((insight: any, index: number) => (
             <View key={index} style={[styles.section, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.rarityIcon}>{insight?.icon || '✨'}</Text>
-                <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{insight?.title || 'Additional Insight'}</Text>
+                <Text style={styles.rarityIcon}>{insight.icon}</Text>
+                <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>{insight.title}</Text>
               </View>
               <Text style={[styles.sectionDescription, { color: isDarkMode ? '#a0a0b8' : '#4b5563' }]}>
-                {insight?.description || 'Discovering more about your unique iris characteristics...'}
+                {insight.description}
               </Text>
             </View>
-          )) || []}
+          ))}
 
           {/* Summary Section */}
           <View style={[styles.section, { backgroundColor: isDarkMode ? '#2a2a4a' : '#ffffff' }]}>
@@ -359,7 +332,7 @@ Generated by Iris Analysis App`;
               <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#1f2937' }]}>Summary</Text>
             </View>
             <Text style={[styles.sectionDescription, { color: isDarkMode ? '#a0a0b8' : '#4b5563' }]}>
-              {analysis?.summary || 'Your iris analysis reveals unique and fascinating characteristics that make your eyes truly special.'}
+              {analysis.summary}
             </Text>
           </View>
 
@@ -523,7 +496,7 @@ Generated by Iris Analysis App`;
             {/* Iris Image at the top */}
             <View style={styles.modalImageContainer}>
               <View style={styles.modalImageWrapper}>
-                <Image source={{ uri: displayImageUri }} style={styles.modalIrisImage} />
+                <Image source={{ uri: imageUri as string }} style={styles.modalIrisImage} />
                 <View style={styles.modalImageOverlay}>
                   <Text style={styles.modalImageCaption}>Your unique iris</Text>
                 </View>
@@ -998,66 +971,36 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   colorCompositionList: {
-    gap: 16,
+    gap: 12,
   },
   colorItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
-  },
-  colorSwatchContainer: {
-    marginRight: 12,
+    gap: 12,
   },
   colorSwatch: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  colorInfo: {
-    flex: 1,
   },
   colorName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
     color: '#1f2937',
-    marginBottom: 2,
+    flex: 1,
   },
   colorHex: {
     fontSize: 12,
     color: '#6b7280',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    textTransform: 'uppercase',
+    fontFamily: 'monospace',
   },
   colorPercentage: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
-    minWidth: 50,
+    minWidth: 40,
     textAlign: 'right',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  errorTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 40,
   },
 });

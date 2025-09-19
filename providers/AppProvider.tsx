@@ -3,14 +3,6 @@ import { User } from 'firebase/auth';
 import createContextHook from '@nkzw/create-context-hook';
 import { firebaseService, UserData, AnalysisHistory } from '@/services/firebaseService';
 
-// Development mode notification
-const showDevNotification = (message: string) => {
-  if (__DEV__) {
-    console.log(`🔧 DEV MODE: ${message}`);
-    // You could also show a toast notification here if desired
-  }
-};
-
 interface AppContextType {
   // Auth state
   user: User | null;
@@ -206,11 +198,6 @@ export const [AppProvider, useApp] = createContextHook<AppContextType>(() => {
     try {
       // Upload image to Firebase Storage
       const imageStoragePath = await firebaseService.uploadImage(historyItem.imageUri, user.uid);
-      
-      // Check if we're using mock storage path (development fallback)
-      if (imageStoragePath.startsWith('mock-uploads/')) {
-        showDevNotification('Using offline mode for image storage');
-      }
       
       // Save analysis to Firestore history
       await firebaseService.saveAnalysisToHistory(user.uid, {
