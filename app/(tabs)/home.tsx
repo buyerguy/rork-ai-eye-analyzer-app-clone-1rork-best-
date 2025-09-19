@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Upload, Camera, Sparkles, Info, Wifi, WifiOff, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { router } from "expo-router";
 import { useApp } from "@/providers/AppProvider";
 import { trpcClient } from "@/lib/trpc";
@@ -45,9 +46,13 @@ export default function HomeScreen() {
     }
 
     try {
+      console.log('Starting photo upload process...');
+      setLoading(true);
+      
       // Request permissions first
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
+        console.log('Media library permission denied');
         Alert.alert(
           'Permission Required',
           'We need access to your photo library to upload images.',
@@ -56,20 +61,53 @@ export default function HomeScreen() {
         return;
       }
 
+      console.log('Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8, // Reduce quality to prevent "URI too long" errors
+        quality: 0.7, // Balanced quality for analysis
         allowsMultipleSelection: false,
+        exif: false, // Don't include EXIF data to reduce size
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        console.log('Image selected:', result.assets[0].uri);
-        router.push({
-          pathname: "/analyzing" as any,
-          params: { imageUri: result.assets[0].uri }
+        const selectedImage = result.assets[0];
+        console.log('Image selected:', {
+          uri: selectedImage.uri.substring(0, 50) + '...',
+          width: selectedImage.width,
+          height: selectedImage.height,
+          fileSize: selectedImage.fileSize
         });
+        
+        // Process the image to ensure it's not too large
+        try {
+          const processedImage = await ImageManipulator.manipulateAsync(
+            selectedImage.uri,
+            [
+              { resize: { width: 800, height: 800 } }, // Reasonable size for analysis
+            ],
+            {
+              compress: 0.8,
+              format: ImageManipulator.SaveFormat.JPEG,
+              base64: false,
+            }
+          );
+          
+          console.log('Image processed successfully');
+          router.push({
+            pathname: "/analyzing" as any,
+            params: { imageUri: processedImage.uri }
+          });
+        } catch (processError) {
+          console.log('Image processing failed, using original:', processError);
+          router.push({
+            pathname: "/analyzing" as any,
+            params: { imageUri: selectedImage.uri }
+          });
+        }
+      } else {
+        console.log('Image selection cancelled');
       }
     } catch (error) {
       console.error('Error selecting image:', error);
@@ -78,6 +116,8 @@ export default function HomeScreen() {
         'Failed to select image. Please try again.',
         [{ text: 'OK' }]
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -132,18 +172,26 @@ export default function HomeScreen() {
             {/* Action Buttons */}
             <View style={styles.buttonsContainer}>
               <TouchableOpacity 
-                style={styles.uploadButton}
+                style={[styles.uploadButton, loading && styles.disabledButton]}
                 onPress={handleUploadPhoto}
                 activeOpacity={0.8}
+                disabled={loading}
               >
-                <Upload size={20} color="#fff" />
-                <Text style={styles.buttonText}>Upload Eye Photo</Text>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Upload size={20} color="#fff" />
+                )}
+                <Text style={styles.buttonText}>
+                  {loading ? 'Processing...' : 'Upload Eye Photo'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={styles.cameraButton}
+                style={[styles.cameraButton, loading && styles.disabledButton]}
                 onPress={handleUseCamera}
                 activeOpacity={0.8}
+                disabled={loading}
               >
                 <Camera size={20} color="#fff" />
                 <Text style={styles.buttonText}>Use Camera</Text>
@@ -378,6 +426,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
     fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   modalOverlay: {
     flex: 1,

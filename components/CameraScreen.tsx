@@ -34,9 +34,24 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
   const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
-    if (permission && !permission.granted) {
-      requestPermission();
-    }
+    const requestCameraPermission = async () => {
+      if (Platform.OS === 'web') {
+        // For web, we'll handle permissions differently
+        console.log('Web platform detected - camera permissions handled by browser');
+        setCameraReady(true);
+        return;
+      }
+      
+      if (permission && !permission.granted) {
+        console.log('Requesting camera permission...');
+        const result = await requestPermission();
+        if (!result.granted) {
+          setError('Camera permission is required to take photos');
+        }
+      }
+    };
+    
+    requestCameraPermission();
   }, [permission, requestPermission]);
 
   const handleCameraReady = () => {
@@ -51,7 +66,8 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
     setCameraReady(false);
   };
 
-  if (!permission) {
+  // For web, skip permission checks as they're handled by the browser
+  if (Platform.OS !== 'web' && !permission) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>Loading camera...</Text>
@@ -59,7 +75,7 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
     );
   }
 
-  if (!permission.granted) {
+  if (Platform.OS !== 'web' && !permission?.granted) {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient colors={['#1a1a3e', '#2d2d5f']} style={styles.container}>
@@ -86,7 +102,7 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
   };
 
   const takePicture = async () => {
-    if (!cameraRef.current || isCapturing || !cameraReady) {
+    if (!cameraRef.current || isCapturing) {
       console.log('Cannot take picture:', { 
         hasRef: !!cameraRef.current, 
         isCapturing, 
@@ -100,13 +116,14 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
       setIsCapturing(true);
       setError(null);
       
-      // Add a longer delay for Android stability
-      if (Platform.OS === 'android') {
-        await new Promise(resolve => setTimeout(resolve, 300));
+      // Wait for camera to be ready on mobile platforms
+      if (Platform.OS !== 'web' && !cameraReady) {
+        console.log('Waiting for camera to be ready...');
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
       
       const photo = await cameraRef.current.takePictureAsync({
-        quality: Platform.OS === 'android' ? 0.5 : 0.7,
+        quality: Platform.OS === 'web' ? 0.8 : (Platform.OS === 'android' ? 0.6 : 0.7),
         base64: false,
         skipProcessing: Platform.OS === 'android',
         exif: false,
@@ -116,7 +133,7 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
         }),
       });
 
-      console.log('Photo captured:', photo);
+      console.log('Photo captured:', photo?.uri ? 'Success' : 'Failed');
 
       if (photo?.uri) {
         if (Platform.OS !== 'web') {
@@ -126,32 +143,42 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
           
           console.log('Moving file from', photo.uri, 'to', newPath);
           
-          // Check if source file exists
-          const fileInfo = await FileSystem.getInfoAsync(photo.uri);
-          if (!fileInfo.exists) {
-            throw new Error('Captured photo file does not exist');
+          try {
+            // Check if source file exists
+            const fileInfo = await FileSystem.getInfoAsync(photo.uri);
+            if (!fileInfo.exists) {
+              console.log('Source file does not exist, using original URI');
+              setCapturedImage(photo.uri);
+              return;
+            }
+            
+            await FileSystem.moveAsync({
+              from: photo.uri,
+              to: newPath,
+            });
+            
+            console.log('File moved successfully to:', newPath);
+            setCapturedImage(newPath);
+          } catch (moveError) {
+            console.log('File move failed, using original URI:', moveError);
+            setCapturedImage(photo.uri);
           }
-          
-          await FileSystem.moveAsync({
-            from: photo.uri,
-            to: newPath,
-          });
-          
-          console.log('File moved successfully to:', newPath);
-          setCapturedImage(newPath);
         } else {
           // For web, use the URI directly
+          console.log('Web platform - using photo URI directly');
           setCapturedImage(photo.uri);
         }
       } else {
-        throw new Error('No photo URI received');
+        throw new Error('No photo URI received from camera');
       }
     } catch (error) {
       console.error('Error taking picture:', error);
-      setError('Failed to capture photo. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(`Failed to capture photo: ${errorMessage}`);
+      
       Alert.alert(
         'Camera Error', 
-        'Failed to capture photo. Please ensure the camera has proper permissions and try again.',
+        `Failed to capture photo: ${errorMessage}. Please try again.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -168,30 +195,24 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
       try {
         console.log('Processing image for upload...');
         
-        // For mobile platforms, just pass the file URI directly
-        // The backend will handle the image processing
-        if (Platform.OS !== 'web') {
-          console.log('Using file URI for mobile:', capturedImage);
-          onCapture(capturedImage);
-        } else {
-          // For web, we need to compress the image
-          const manipulatedImage = await ImageManipulator.manipulateAsync(
-            capturedImage,
-            [
-              { resize: { width: 512 } },
-            ],
-            {
-              compress: 0.7,
-              format: ImageManipulator.SaveFormat.JPEG,
-              base64: false, // Don't convert to base64 here
-            }
-          );
-          
-          console.log('Image processed for web:', manipulatedImage.uri);
-          onCapture(manipulatedImage.uri);
-        }
+        // Always compress the image to prevent "URI too long" errors
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+          capturedImage,
+          [
+            { resize: { width: 800, height: 800 } }, // Reasonable size for iris analysis
+          ],
+          {
+            compress: 0.8,
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: false,
+          }
+        );
+        
+        console.log('Image processed successfully:', manipulatedImage.uri);
+        onCapture(manipulatedImage.uri);
       } catch (error) {
         console.error('Error processing image:', error);
+        console.log('Using original image as fallback');
         onCapture(capturedImage); // Fallback to original
       }
     }
@@ -259,6 +280,9 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
           mode="picture"
           onCameraReady={handleCameraReady}
           onMountError={handleCameraError}
+          {...(Platform.OS === 'web' && {
+            // Web-specific props if needed
+          })}
         >
           {!cameraReady && (
             <View style={styles.loadingOverlay}>
@@ -288,10 +312,10 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
               <TouchableOpacity 
                 style={[
                   styles.captureButton, 
-                  (isCapturing || !cameraReady) && styles.capturingButton
+                  (isCapturing || (Platform.OS !== 'web' && !cameraReady)) && styles.capturingButton
                 ]} 
                 onPress={takePicture}
-                disabled={isCapturing || !cameraReady}
+                disabled={isCapturing || (Platform.OS !== 'web' && !cameraReady)}
               >
                 {isCapturing ? (
                   <ActivityIndicator size="small" color="#4dd0e1" />
@@ -300,7 +324,7 @@ export default function CameraScreen({ onCapture, onClose }: CameraScreenProps) 
                 )}
               </TouchableOpacity>
             </View>
-            {!cameraReady && (
+            {Platform.OS !== 'web' && !cameraReady && (
               <Text style={styles.cameraStatusText}>Preparing camera...</Text>
             )}
           </View>
