@@ -1,3 +1,9 @@
+export interface ColorComposition {
+  name: string;
+  hex: string;
+  percentage: number;
+}
+
 export interface IrisAnalysis {
   pattern: {
     name: string;
@@ -8,6 +14,11 @@ export interface IrisAnalysis {
       genetic: string;
     };
   };
+  dominantColor: {
+    name: string;
+    confidence: number;
+  };
+  colorComposition: ColorComposition[];
   sensitivity: {
     name: string;
     description: string;

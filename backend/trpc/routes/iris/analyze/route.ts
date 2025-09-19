@@ -11,6 +11,15 @@ const IrisAnalysisSchema = z.object({
       genetic: z.string(),
     }).optional(),
   }),
+  dominantColor: z.object({
+    name: z.string(),
+    confidence: z.number(),
+  }),
+  colorComposition: z.array(z.object({
+    name: z.string(),
+    hex: z.string(),
+    percentage: z.number(),
+  })),
   sensitivity: z.object({
     name: z.string(),
     description: z.string(),
@@ -107,6 +116,17 @@ export const analyzeIrisProcedure = publicProcedure
                     "genetic": "Genetic inheritance information"
                   }
                 },
+                "dominantColor": {
+                  "name": "Primary iris color name (e.g., Deep Hazel, Ocean Blue, etc.)",
+                  "confidence": 40
+                },
+                "colorComposition": [
+                  {
+                    "name": "Color name (e.g., Dark Brown, Amber, Deep Green)",
+                    "hex": "#color_hex_code",
+                    "percentage": 50
+                  }
+                ],
                 "sensitivity": {
                   "name": "Light sensitivity classification",
                   "description": "Description of light sensitivity characteristics based on iris color and structure"
@@ -190,6 +210,27 @@ export const analyzeIrisProcedure = publicProcedure
               genetic: "T13"
             }
           },
+          dominantColor: {
+            name: "Deep Hazel",
+            confidence: 40
+          },
+          colorComposition: [
+            {
+              name: "Dark Brown",
+              hex: "#4c3319",
+              percentage: 50
+            },
+            {
+              name: "Amber",
+              hex: "#ffbf00",
+              percentage: 30
+            },
+            {
+              name: "Deep Green",
+              hex: "#355e3b",
+              percentage: 20
+            }
+          ],
           sensitivity: {
             name: "Sunlight Sensitivity",
             description: "Lighter-colored eyes, like yours, contain less protective pigment against the sun's rays. It's a great reminder to don stylish sunglasses on bright days to keep those beautiful eyes happy!"
