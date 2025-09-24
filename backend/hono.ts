@@ -36,7 +36,7 @@ const allowedOrigins = [
   'https://rork.com',
   process.env.EXPO_PUBLIC_WEB_URL,
   process.env.EXPO_PUBLIC_PROD_URL
-].filter((origin): origin is string => Boolean(origin));
+].filter((origin): origin is string => Boolean(origin) && typeof origin === 'string' && origin.trim() !== '');
 
 app.use("*", cors({
   origin: allowedOrigins.length > 0 ? allowedOrigins : '*',

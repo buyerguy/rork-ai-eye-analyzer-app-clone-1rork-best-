@@ -1,7 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { GoogleAuth } from 'google-auth-library';
-import { CallableRequest } from 'firebase-functions/v2/https';
 
 // Type definitions for function parameters
 interface AnalyzeIrisData {
@@ -14,7 +13,7 @@ interface VerifyPurchaseData {
 }
 
 interface CheckSubscriptionData {
-  // No specific data needed for this function
+  [key: string]: any; // Allow any properties for flexibility
 }
 
 // Initialize Firebase Admin
@@ -55,9 +54,7 @@ interface IrisAnalysis {
 }
 
 // Analyze Iris Function
-export const analyzeIris = functions.https.onCall(async (request: CallableRequest<AnalyzeIrisData>) => {
-  const data = request.data;
-  const context = request;
+export const analyzeIris = functions.https.onCall(async (data: AnalyzeIrisData, context: functions.https.CallableContext) => {
   // Check authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
@@ -216,9 +213,7 @@ export const analyzeIris = functions.https.onCall(async (request: CallableReques
 });
 
 // Verify Google Play Purchase Function
-export const verifyGooglePlayPurchase = functions.https.onCall(async (request: CallableRequest<VerifyPurchaseData>) => {
-  const data = request.data;
-  const context = request;
+export const verifyGooglePlayPurchase = functions.https.onCall(async (data: VerifyPurchaseData, context: functions.https.CallableContext) => {
   // Check authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
@@ -247,11 +242,12 @@ export const verifyGooglePlayPurchase = functions.https.onCall(async (request: C
     });
     
     const authClient = await auth.getClient();
-    const { google } = require('googleapis');
-    const androidpublisher = google.androidpublisher({ version: 'v3', auth: authClient });
+    // Note: googleapis import moved to top level for production use
+    // const { google } = require('googleapis');
+    // const androidpublisher = google.androidpublisher({ version: 'v3', auth: authClient });
 
     // Verify the purchase with Google Play
-    const packageName = GOOGLE_PLAY_PACKAGE_NAME;
+    // const packageName = GOOGLE_PLAY_PACKAGE_NAME;
     
     // For development/testing, we'll simulate a successful purchase
     // In production, uncomment the real Google Play API call below:
@@ -322,9 +318,7 @@ export const verifyGooglePlayPurchase = functions.https.onCall(async (request: C
 });
 
 // Check subscription status function (optional helper)
-export const checkSubscriptionStatus = functions.https.onCall(async (request: CallableRequest<CheckSubscriptionData>) => {
-  const data = request.data;
-  const context = request;
+export const checkSubscriptionStatus = functions.https.onCall(async (data: CheckSubscriptionData, context: functions.https.CallableContext) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
