@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "onlyone-99913"
+    "default": "your-firebase-project-id"
   }
 }
+// Replace 'your-firebase-project-id' with your actual Firebase project ID
+// Get this from Firebase Console > Project Settings > General tab
