@@ -98,19 +98,23 @@ firebase deploy --only functions
 
 ### 5. Frontend Configuration
 
-Update `services/firebaseConfig.ts` with your Firebase project credentials:
+Configure environment variables in `app/.env` with your Firebase project credentials:
 
-```typescript
-const firebaseConfig = {
-  apiKey: "AIzaSyDCUfubbyWL01w1PWxQDzQGxkulbAcAxRE",
-  authDomain: "onlyone-99913.firebaseapp.com",
-  projectId: "onlyone-99913",
-  storageBucket: "onlyone-99913.firebasestorage.app",
-  messagingSenderId: "355889657524",
-  appId: "1:355889657524:web:9854389af49862a0c789e1",
-  measurementId: "G-Z6WMXCRJ9N"
-};
+```bash
+# Copy from app/.env.example and fill in your values
+cp app/.env.example app/.env
+
+# Edit app/.env with your Firebase project credentials:
+EXPO_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.firebasestorage.app
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+EXPO_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
+EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 ```
+
+**Security Note**: The `services/firebaseConfig.ts` file now validates that all required environment variables are set and will throw an error if any are missing. This ensures no hardcoded credentials are used in production.
 
 ## 📱 App Features
 
